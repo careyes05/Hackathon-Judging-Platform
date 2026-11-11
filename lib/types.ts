@@ -38,3 +38,29 @@ export type Judgment = {
 };
 
 export type StaffRole = "admin" | "judge";
+
+export type ResultsJudge = {
+  id: string;
+  label: string;
+  scored: number;
+};
+
+export type ResultsRow = {
+  submission_id: string;
+  team_name: string;
+  project_title: string;
+  judge_count: number;
+  partial_count: number;
+  mean_total: number | null;
+  category_means: Record<string, number | null>;
+  per_judge: Record<string, number | null>;
+  feedback: Array<{ judge_id: string; judge_label: string; text: string }>;
+};
+
+export type ResultsPayload = {
+  hackathon: Pick<Hackathon, "id" | "name" | "slug" | "rubric">;
+  total_possible: number;
+  team_count: number;
+  judges: ResultsJudge[];
+  rows: ResultsRow[];
+};

@@ -5,7 +5,10 @@ import Link from "next/link";
 import { ArrowDown, ArrowUpRight, Check, ExternalLink, LoaderCircle, LogOut, Plus, Save, ShieldCheck, Sparkles } from "lucide-react";
 import { getBrowserClient } from "@/lib/supabase/browser";
 import { DEFAULT_RUBRIC } from "@/lib/rubric";
-import type { Hackathon, RubricCategory, StaffRole, Submission } from "@/lib/types";
+import { siteConfig } from "@/lib/site-config";
+import Logo from "@/components/logo";
+import ResultsPanel from "@/components/results-panel";
+import type { Hackathon, ResultsPayload, RubricCategory, StaffRole, Submission } from "@/lib/types";
 
 type EventPayload = { hackathon: Hackathon; submissions: Submission[] };
 
@@ -65,6 +68,9 @@ export default function StaffPortal() {
   const [eventDate, setEventDate] = useState("");
   const [location, setLocation] = useState("");
   const [themesText, setThemesText] = useState("");
+  const [results, setResults] = useState<ResultsPayload | null>(null);
+  const [resultsLoading, setResultsLoading] = useState(false);
+  const [resultsOpen, setResultsOpen] = useState(false);
 
   const loadStaff = useCallback(async (token: string) => {
     const response = await fetch("/api/staff", { headers: { Authorization: `Bearer ${token}` } });
@@ -103,6 +109,8 @@ export default function StaffPortal() {
   }, [client, loadStaff]);
 
   useEffect(() => {
+    setResults(null);
+    setResultsOpen(false);
     if (!session || !selectedSlug) {
       setEventData(null);
       return;
@@ -268,6 +276,86 @@ export default function StaffPortal() {
     }
   }
 
+  const loadResults = useCallback(async () => {
+    if (!session || !selectedSlug) return;
+    setResultsLoading(true);
+    setError("");
+    try {
+      const response = await fetch(
+        `/api/hackathons/${encodeURIComponent(selectedSlug)}/results`,
+        { headers: { Authorization: `Bearer ${session.access_token}` } },
+      );
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not load results.");
+      setResults(data as ResultsPayload);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Could not load results.");
+    } finally {
+      setResultsLoading(false);
+    }
+  }, [session, selectedSlug]);
+
+  function downloadCsv(filename: string, rows: string[][]) {
+    const escapeCell = (value: string) =>
+      /[",\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
+    const csv = rows.map((row) => row.map(escapeCell).join(",")).join("\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function exportScores() {
+    if (!results) return;
+    const rubric = results.hackathon.rubric;
+    const header = [
+      "Rank",
+      "Team",
+      "Project",
+      `Mean total (of ${results.total_possible})`,
+      "Judges scored",
+      "Partial cards",
+      ...rubric.map((category) => `${category.name} (mean of ${category.maxScore})`),
+      ...results.judges.map((judge) => `${judge.label} total`),
+    ];
+    const body = results.rows.map((row, index) => [
+      String(index + 1),
+      row.team_name,
+      row.project_title,
+      row.mean_total === null ? "" : row.mean_total.toFixed(2),
+      String(row.judge_count),
+      String(row.partial_count),
+      ...rubric.map((category) => {
+        const value = row.category_means[category.id];
+        return value === null || value === undefined ? "" : value.toFixed(2);
+      }),
+      ...results.judges.map((judge) => {
+        const value = row.per_judge[judge.id];
+        return typeof value === "number" ? String(value) : "";
+      }),
+    ]);
+    downloadCsv(`${results.hackathon.slug}-scores.csv`, [header, ...body]);
+  }
+
+  function exportFeedback() {
+    if (!results) return;
+    const rows: string[][] = [["Team", "Project", "Judge", "Feedback"]];
+    results.rows.forEach((row) => {
+      row.feedback.forEach((note) => {
+        rows.push([row.team_name, row.project_title, note.judge_label, note.text]);
+      });
+    });
+    if (rows.length === 1) {
+      setError("No written feedback has been saved yet.");
+      return;
+    }
+    downloadCsv(`${results.hackathon.slug}-feedback.csv`, rows);
+  }
+
   function updateScore(submissionId: string, categoryId: string, value: string) {
     setScores((current) => {
       const submissionScores = { ...current[submissionId] };
@@ -284,23 +372,24 @@ export default function StaffPortal() {
   if (!session) {
     return (
       <aside className="portal-card signin-card">
-        <div className="portal-card-top"><span className="eyebrow muted-eyebrow">STAFF ACCESS</span><span className="secure-tag"><ShieldCheck size={14} /> PRIVATE</span></div>
-        <h2>Good ideas need<br />good <em>judges.</em></h2>
-        <p>Sign in with the email and password for your invited staff account.</p>
+        {siteConfig.logos.staff ? <Logo slot={siteConfig.logos.staff} className="staff-logo" /> : null}
+        <div className="portal-card-top"><span className="eyebrow muted-eyebrow">{siteConfig.staff.signInEyebrow}</span><span className="secure-tag"><ShieldCheck size={14} /> {siteConfig.staff.signInBadge}</span></div>
+        <h2>{siteConfig.staff.signInHeadingTop}<br /><em>{siteConfig.staff.signInHeadingBottom}</em></h2>
+        <p>{siteConfig.staff.signInBody}</p>
         <form onSubmit={signInWithPassword} className="signin-form">
           <label className="field"><span>Work email</span><input type="email" required autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@yourteam.com" /></label>
           <label className="field"><span>Password</span><input type="password" required autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Your account password" /></label>
           <button className="button button-dark" disabled={busy}>{busy ? "Signing in…" : "Sign in"} <ShieldCheck size={15} /></button>
         </form>
         {error && <p className="form-error" role="alert">{error}</p>}
-        <p className="signin-footnote">Need an account or password? Ask your organizer to create or reset your staff account.</p>
+        <p className="signin-footnote">{siteConfig.staff.signInFootnote}</p>
       </aside>
     );
   }
 
   return (
     <div className="portal-card staff-dashboard">
-      <div className="dashboard-top"><div><span className="eyebrow muted-eyebrow">STAFF WORKSPACE</span><h2>{role === "admin" ? "Make it happen." : "Make it count."}</h2><span className="role-pill">{role === "admin" ? "ORGANIZER" : role === "judge" ? "JUDGE" : "CHECKING ACCESS"}</span></div><button type="button" className="icon-button" onClick={signOut} aria-label="Sign out"><LogOut size={17} /></button></div>
+      <div className="dashboard-top"><div><span className="eyebrow muted-eyebrow">{siteConfig.staff.workspaceEyebrow}</span><h2>{role === "admin" ? siteConfig.staff.adminHeading : siteConfig.staff.judgeHeading}</h2><span className="role-pill">{role === "admin" ? "ORGANIZER" : role === "judge" ? "JUDGE" : "CHECKING ACCESS"}</span></div><button type="button" className="icon-button" onClick={signOut} aria-label="Sign out"><LogOut size={17} /></button></div>
       {role === "admin" && (
         <details className="create-event">
           <summary><span><Plus size={16} /> Create a hackathon page</span><ArrowDown size={16} /></summary>
@@ -316,10 +405,10 @@ export default function StaffPortal() {
         </details>
       )}
       <div className="judging-workspace">
-        <div className="workspace-heading"><div><span className="eyebrow muted-eyebrow">THE JUDGE’S DESK</span><h3>Score the work.</h3></div><span className="submission-count">{eventData?.submissions.length ?? 0} PROJECTS</span></div>
+        <div className="workspace-heading"><div><span className="eyebrow muted-eyebrow">{siteConfig.staff.deskEyebrow}</span><h3>{siteConfig.staff.deskHeading}</h3></div><span className="submission-count">{eventData?.submissions.length ?? 0} PROJECTS</span></div>
         {events.length > 0 ? <label className="field event-picker"><span>Choose an event</span><select value={selectedSlug} onChange={(event) => setSelectedSlug(event.target.value)}><option value="">Select a hackathon</option>{events.map((item) => <option value={item.slug} key={item.id}>{item.name}</option>)}</select></label> : <p className="empty-note">{role === "admin" ? "Create your first event above to start receiving projects." : "No event pages have been published yet."}</p>}
         {role === "admin" && eventData && !hasExpandedRubric(eventData.hackathon.rubric) && <div className="rubric-update"><p>This event still has its shorter rubric. Apply the expanded, judge-only 8-category rubric.</p><button className="button button-outline" type="button" onClick={applyExpandedRubric} disabled={busy}>{busy ? "Updating rubric…" : "Apply expanded rubric"} <ArrowUpRight size={14} /></button></div>}
-        {eventData && <p className="judge-privacy-note"><ShieldCheck size={14} /> Scores are private to each judge. Every project below has its own independent scorecard.</p>}
+        {eventData && <p className="judge-privacy-note"><ShieldCheck size={14} /> {siteConfig.staff.privacyNote}</p>}
         {eventLoading && <p className="loading-note"><LoaderCircle size={16} className="spin" /> Loading submissions…</p>}
         {!eventLoading && selectedSlug && eventData?.submissions.length === 0 && <p className="empty-note">No submissions yet. Share the event page with teams to get started.</p>}
         {!eventLoading && eventData?.submissions.map((submission, index) => (
@@ -353,6 +442,17 @@ export default function StaffPortal() {
         ))}
         {eventData && <Link className="view-event-link" href={"/h/" + eventData.hackathon.slug} target="_blank">View public event page <ArrowUpRight size={14} /></Link>}
       </div>
+      {role === "admin" && selectedSlug && (
+        <ResultsPanel
+          results={results}
+          open={resultsOpen}
+          loading={resultsLoading}
+          onToggle={() => { setResultsOpen((isOpen) => !isOpen); if (!results) void loadResults(); }}
+          onRefresh={() => void loadResults()}
+          onExportScores={exportScores}
+          onExportFeedback={exportFeedback}
+        />
+      )}
       {notice && <p className="form-success" role="status">{notice}</p>}
       {error && <p className="form-error" role="alert">{error}</p>}
     </div>
