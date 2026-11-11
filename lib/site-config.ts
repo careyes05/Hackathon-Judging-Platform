@@ -24,17 +24,17 @@ export type LogoSlot = {
 export const siteConfig = {
   /** Browser tab title and search description. */
   meta: {
-    title: "Fordham AI Club Hackathon",
+    title: "Fordham Hackathon",
     description:
-      "Event pages, team submissions and judging for the Fordham AI Club hackathon.",
+      "Event pages, team submissions and judging for the Fordham hackathon, presented by GPMC and the Fordham Artificial Intelligence Society.",
   },
 
   brand: {
     /** Wordmark in the top-left. Rendered as leadTrail, trail in lighter weight. */
     wordmarkLead: "fordham",
-    wordmarkTrail: "ai club",
+    wordmarkTrail: "hackathon",
     /** Screen-reader label for the home link. */
-    homeLabel: "Fordham AI Club Hackathon home",
+    homeLabel: "Fordham Hackathon home",
   },
 
   /**
@@ -51,12 +51,21 @@ export const siteConfig = {
    * `partners` renders a row above the footer on every page.
    */
   logos: {
+    /**
+     * Set this to put a club mark beside the wordmark in the top-left, e.g.
+     *   { src: "/logos/fordham-ais-mark.png", alt: "Fordham AI Society", height: 30 }
+     * Left null so neither co-hosting club sits above the other by default.
+     */
     header: null as LogoSlot,
     hero: null as LogoSlot,
     eventPage: null as LogoSlot,
     staff: null as LogoSlot,
     footer: null as LogoSlot,
-    partners: [] as NonNullable<LogoSlot>[],
+    /** Both club logos, side by side above the footer on every page. */
+    partners: [
+      { src: "/logos/gpmc.png", alt: "Gabelli Product Management Club", height: 40 },
+      { src: "/logos/fordham-ais.png", alt: "Fordham Artificial Intelligence Society", height: 40 },
+    ] as NonNullable<LogoSlot>[],
   },
 
   nav: {
@@ -65,11 +74,11 @@ export const siteConfig = {
   },
 
   footer: {
-    tagline: "Built by the Fordham AI Club.",
-    credit: "Fordham AI Club",
+    tagline: "Built by Fordham students.",
+    credit: "Fordham Hackathon",
     year: "2026",
     /** Heading above the partner logo row. Empty string hides it. */
-    partnersLabel: "",
+    partnersLabel: "PRESENTED BY",
   },
 
   landing: {
