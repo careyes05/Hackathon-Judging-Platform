@@ -426,3 +426,39 @@ button { cursor: pointer; }
   .logo-row-items { gap: 18px; }
 }
 .results-team { min-width: 190px; }
+
+/* ---------- Welcome headline (replaces the short two-word hero) ---------- */
+.hero h1.hero-welcome {
+  max-width: 19ch;
+  margin: 22px 0 18px;
+  font: 600 clamp(30px, 3.2vw, 43px)/1.1 var(--display);
+  letter-spacing: -1.6px;
+  text-wrap: balance;
+}
+.hero h1.hero-welcome span { color: var(--accent); }
+
+/* ---------- Hero artwork: club mark instead of the card collage ---------- */
+.hero-art-logo { display: flex; align-items: center; justify-content: center; }
+.hero-art-mark { position: relative; z-index: 2; max-width: 78%; }
+
+/* ---------- Event banner artwork ---------- */
+.event-banner { display: flex; flex-direction: column; align-items: flex-start; gap: 20px; margin-top: 4px; }
+.event-banner img { width: 100%; height: auto; display: block; border: 1px solid var(--line); }
+
+/* ---------- Themes headline the section instead of a fixed heading ------- */
+.theme-headline { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; margin-top: 14px; }
+.theme-headline span {
+  font: 600 clamp(21px, 2.3vw, 31px)/1.12 var(--display);
+  letter-spacing: -1.1px;
+  color: var(--ink);
+}
+.theme-headline span:nth-child(even) { color: var(--accent); }
+.theme-headline .theme-headline-empty { color: var(--muted-soft); }
+
+@media (max-width: 760px) {
+  .hero h1.hero-welcome { max-width: none; font-size: clamp(27px, 7.4vw, 36px); letter-spacing: -1.1px; }
+  .hero-art-mark { max-width: 62%; }
+  .event-banner { gap: 16px; }
+  .event-banner-cta { width: 100%; justify-content: center; }
+  .theme-headline { gap: 4px 13px; }
+}

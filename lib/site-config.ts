@@ -24,17 +24,17 @@ export type LogoSlot = {
 export const siteConfig = {
   /** Browser tab title and search description. */
   meta: {
-    title: "Fordham Hackathon",
+    title: "Fordham Hackathon Hub",
     description:
       "Event pages, team submissions and judging for the Fordham hackathon, presented by GPMC and the Fordham Artificial Intelligence Society.",
   },
 
   brand: {
     /** Wordmark in the top-left. Rendered as leadTrail, trail in lighter weight. */
-    wordmarkLead: "fordham",
-    wordmarkTrail: "hackathon",
+    wordmarkLead: "Fordham Hackathon",
+    wordmarkTrail: "Hub",
     /** Screen-reader label for the home link. */
-    homeLabel: "Fordham Hackathon home",
+    homeLabel: "Fordham Hackathon Hub home",
   },
 
   /**
@@ -58,6 +58,12 @@ export const siteConfig = {
      */
     header: null as LogoSlot,
     hero: null as LogoSlot,
+    /** Fills the artwork panel beside the landing headline. */
+    heroArt: {
+      src: "/logos/gpmc-stacked.png",
+      alt: "Gabelli Product Management Club",
+      height: 280,
+    } as LogoSlot,
     eventPage: null as LogoSlot,
     staff: null as LogoSlot,
     footer: null as LogoSlot,
@@ -83,15 +89,12 @@ export const siteConfig = {
 
   landing: {
     eyebrow: "THE PLACE WHERE IDEAS SHIP",
-    headlineTop: "Make a little",
-    headlineBottom: "future.",
+    /** Rendered as one headline; the accent half picks up the brand color. */
+    headlineLead: "Welcome to the Hackathon Hub for",
+    headlineAccent: "Gabelli Product Management Club & AI Society",
     intro:
       "Find your next hackathon, share what your team is building, and give great ideas the recognition they deserve.",
     cta: "Find your event",
-    artCardBackLabel: "IDEA → IMPACT",
-    artCardFront: ["Build", "the next", "thing."],
-    artCardNote: "NO PERMISSION NEEDED",
-    artTag: ["GOOD THINGS", "START HERE"],
     eventsEyebrow: "YOUR NEXT BIG IDEA",
     eventsHeading: "Open hackathons",
     hostLink: "Host an event",
@@ -108,6 +111,15 @@ export const siteConfig = {
   },
 
   eventPage: {
+    /**
+     * Replaces the colored banner at the top of an event page. The artwork
+     * already carries the title, date, room and club logos, so the page does
+     * not print those again. Set to null to fall back to the colored band.
+     */
+    bannerImage: {
+      src: "/banners/hack-the-unreachable.png",
+      alt: "Hack the Unreachable — build AI that finds out what people actually think. Gabelli School of Business, Room 333, November 14, 2026.",
+    } as { src: string; alt: string } | null,
     backLink: "All events",
     eyebrow: "THE INVITATION",
     submitCta: "Submit your project",
@@ -117,10 +129,9 @@ export const siteConfig = {
     briefEyebrow: "01 / THE BRIEF",
     briefHeading: ["Bring your", "curiosity."],
     themesEyebrow: "02 / AREAS TO EXPLORE",
-    themesHeading: ["Choose a", "direction."],
     themesEmpty: "All ideas welcome",
     ctaEyebrow: "READY WHEN YOU ARE",
-    ctaHeading: ["Your team's next", "chapter starts here."],
+    ctaHeading: ["Ready to submit?"],
     ctaButton: "Upload your submission",
     dateTbd: "Date to be announced",
   },

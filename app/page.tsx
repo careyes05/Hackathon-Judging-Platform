@@ -27,20 +27,13 @@ export default async function HomePage() {
         <div className="hero-copy">
           {siteConfig.logos.hero ? <Logo slot={siteConfig.logos.hero} className="hero-logo" /> : null}
           <span className="eyebrow"><span className="pulse-dot" /> {copy.eyebrow}</span>
-          <h1>{copy.headlineTop}<br /><span>{copy.headlineBottom}</span></h1>
+          <h1 className="hero-welcome">{copy.headlineLead} <span>{copy.headlineAccent}</span></h1>
           <p>{copy.intro}</p>
           <a className="button button-dark" href="#events">{copy.cta} <ArrowDownRight size={17} /></a>
         </div>
-        <div className="hero-art" aria-hidden="true">
-          <div className="art-orbit orbit-one" /><div className="art-orbit orbit-two" />
-          <div className="art-card art-card-back"><span>{copy.artCardBackLabel}</span><div className="mini-bars"><i /><i /><i /><i /></div></div>
-          <div className="art-card art-card-front">
-            <span className="art-star">✳</span>
-            <strong>{copy.artCardFront.map((line, index) => <span key={line}>{line}{index < copy.artCardFront.length - 1 ? <br /> : null}</span>)}</strong>
-            <span className="art-note">{copy.artCardNote}</span>
-          </div>
-          <span className="art-sparkle sparkle-one">✳</span><span className="art-sparkle sparkle-two">✦</span>
-          <span className="art-tag">{copy.artTag[0]}<br />{copy.artTag[1]}</span>
+        <div className="hero-art hero-art-logo">
+          <div className="art-orbit orbit-one" aria-hidden="true" /><div className="art-orbit orbit-two" aria-hidden="true" />
+          {siteConfig.logos.heroArt ? <Logo slot={siteConfig.logos.heroArt} className="hero-art-mark" /> : null}
         </div>
         <div className="hero-index">01 <span>/</span> 03</div>
       </section>

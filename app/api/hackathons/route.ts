@@ -40,8 +40,10 @@ export async function POST(request: NextRequest) {
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || slug.length > 80) {
     return Response.json({ error: "Use a URL-friendly slug (lowercase letters, numbers, and hyphens)." }, { status: 400 });
   }
-  if (description.length < 20 || description.length > 2000) {
-    return Response.json({ error: "Event description must be 20–2,000 characters." }, { status: 400 });
+  // Optional: organizers often leave this blank when the banner artwork
+  // already explains the event.
+  if (description.length > 2000) {
+    return Response.json({ error: "Event description must be 2,000 characters or fewer." }, { status: 400 });
   }
   if (themes.length > 10 || themes.some((theme) => theme.length > 80)) {
     return Response.json({ error: "Add at most 10 themes, each no longer than 80 characters." }, { status: 400 });
