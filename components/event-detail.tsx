@@ -32,9 +32,6 @@ export default function EventDetail({ event }: { event: Hackathon }) {
         <div className="event-banner">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={copy.bannerImage.src} alt={copy.bannerImage.alt} />
-          <Link className="button button-dark event-banner-cta" href={`/h/${event.slug}/submit`}>
-            {copy.submitCta} <ArrowUpRight size={16} />
-          </Link>
         </div>
       ) : (
         <div className="event-hero">

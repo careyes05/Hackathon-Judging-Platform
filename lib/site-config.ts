@@ -132,7 +132,7 @@ export const siteConfig = {
     themesEmpty: "All ideas welcome",
     ctaEyebrow: "READY WHEN YOU ARE",
     ctaHeading: ["Ready to submit?"],
-    ctaButton: "Upload your submission",
+    ctaButton: "Submit your project",
     dateTbd: "Date to be announced",
   },
 
