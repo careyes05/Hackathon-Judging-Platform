@@ -1,51 +1,175 @@
-# Hackathon Hub
+# Fordham Hackathon Hub
 
-A Next.js app for publishing hackathon event pages, collecting team submissions, and recording private judge scores. Vercel hosts the app; Supabase's free tier supplies the persistent database, private file storage, and judge sign-in.
+Submission intake, judging and scoring for a university hackathon. Built on a
+starter template, extended until it could actually run an event, and then used
+to run one: **19 teams, 7 judges, 60 scorecards, one afternoon.**
 
-## Features
+Live: https://hackathon-hub-careyes05.vercel.app
 
-- Public event directory and shareable event pages at `/h/[event-slug]`.
-- Team submission form with project details, links, and a private file upload (up to 4 MB).
-- First submission creates a random team edit code. The code is shown only once and is required for future edits; keep it somewhere safe and share it with teammates.
-- Staff sign-in by email and password using Supabase Auth. Admins create hackathons and their rubric; judges see submissions, download files, and save their own scores and feedback.
-- Judges use an expanded eight-category rubric; it is private to the staff portal and never displayed on public event pages.
-- Each judge has a separate scorecard for every team. Scores and written feedback are private to the judge who recorded them.
+> Forked from [SethiDeepika/hackathon-hub](https://github.com/SethiDeepika/hackathon-hub),
+> which provided the Next.js + Supabase foundation, the submission flow and the
+> judging scorecard. The work described below is what I added on top.
 
-## Supabase setup
+---
 
-1. Create a Supabase project on its free plan.
-2. In the Supabase SQL Editor, run [`supabase/schema.sql`](./supabase/schema.sql).
-3. In **Project Settings → API**, copy the project URL, anon key, and service-role key.
-4. Add these environment variables to `.env.local` for local work and to Vercel **Project → Settings → Environment Variables** for deployment:
+## The problem
 
-   | Name | Value |
-   | --- | --- |
-   | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
-   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon/publishable key |
-   | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service-role/secret key |
+Two Fordham clubs — the Gabelli Product Management Club and the Fordham
+Artificial Intelligence Society — were co-hosting a hackathon in four days.
+The starter template handled submissions and let judges score privately, but
+it could not produce a result. Judge scores were readable only by the judge
+who wrote them, there was no aggregate view, and nothing totalled or ranked
+anything. We would have reached the end of demos with scores sitting in a
+database and no way to see them.
 
-   Never expose the service-role key in a `NEXT_PUBLIC_` variable or commit it to source control.
-5. In **Authentication → URL Configuration**, set the Site URL to your Vercel domain and add `https://YOUR-DOMAIN/judges` to the redirect URL allow list. For local work, also allow `http://localhost:3000/judges`.
-6. Create the organizer and judge accounts in **Authentication → Users** with email/password authentication. Assign each account a role in the SQL Editor, replacing the email:
+That gap, plus the event's branding, is what I built.
 
-   ```sql
-   insert into public.user_roles (user_id, role)
-   select id, 'admin' from auth.users where email = 'organizer@example.com'
-   on conflict (user_id) do update set role = excluded.role;
-   ```
+---
 
-   Use `'judge'` for a judge account. An account has one role; admins can also use the judging portal. Only trusted staff should be assigned a role.
-7. Deploy the project to Vercel and add the same environment variables to the production deployment. Redeploy after setting or changing environment variables.
+## What I added
 
-## Run locally
+### Organizer results view
+
+The core gap. A new admin-only endpoint aggregates every judge's scorecards
+for an event and a Results panel renders the outcome: ranking by mean score,
+per-category averages, judge coverage, written feedback, and CSV export of
+both scores and notes.
+
+The tally rules are in [`lib/results.ts`](lib/results.ts), deliberately
+separated from the route so they can be tested without a database. Three
+decisions that mattered more than they look:
+
+- **A scorecard counts only when every category is scored.** A half-finished
+  card is excluded from the mean and surfaced separately as `+N partial`, so a
+  judge who got interrupted cannot drag a team down.
+- **Unjudged teams carry a null mean and sort last** rather than a zero, which
+  would read as "scored badly" instead of "not yet seen".
+- **Judge coverage is shown, not hidden.** A team seen by three judges is not
+  directly comparable to one seen by six, so the table flags the gap before
+  anyone reads the ranking.
+
+I verified the math against real data with eleven assertions covering the
+cases that would quietly corrupt a ranking — partial cards, unjudged teams,
+and uneven coverage.
+
+### A design system where there wasn't one
+
+`globals.css` held **132 distinct hardcoded hex values across 154
+occurrences**. Six CSS variables existed at the top of the file, which made it
+look configurable; it was not. Changing the palette meant hunting scattered
+literals.
+
+All of them now resolve through a semantic token block, set to Fordham's
+official brand colors. Re-skinning the app is a handful of lines. Success-green
+and error-red were deliberately kept as their own tokens rather than being
+folded into the brand accent — a success message should not be the same color
+as an error.
+
+### Content and branding without a developer
+
+Every heading, label and button string moved into
+[`lib/site-config.ts`](lib/site-config.ts), alongside six configurable logo
+slots. Club officers can reword the site or move a logo without opening a
+component or knowing React.
+
+### Smaller things the event needed
+
+- Event descriptions made optional, since the banner artwork already carried
+  the event details
+- Two submission buttons with different labels, pointing at the same page,
+  collapsed into one — teams were hunting for a second form that did not exist
+- Page body extracted into a component so layouts can be reviewed with sample
+  data, no database connection required
+
+---
+
+## Running a live event on it
+
+The build was the easy half.
+
+| | |
+| --- | --- |
+| Teams | 19 |
+| Judges scoring | 7 |
+| Scorecards saved | 60 |
+| Teams with an uploaded deck | 14 |
+| Rubric | 8 categories, 0–10 each |
+
+What actually went wrong, and what it taught me:
+
+**Edit codes have no recovery path.** A team's edit code is shown once at
+submission and stored only as a hash. Teams that did not copy it could not
+edit, so they resubmitted under slightly different names — producing
+duplicate entries for the same project. Caught them by matching on repository
+URL rather than team name, which is the signal that survives a rename.
+
+**Judge lists do not refresh.** The portal fetches submissions once on load,
+with no polling or realtime subscription. A team that submitted after judging
+began was invisible to every judge until they reloaded. On the day this meant
+one team sitting at zero scores while eight judges worked from a stale list.
+
+**Deleting a team deletes their scores.** Obvious in hindsight, invisible in
+the moment. Cleanup that is free before judging opens is destructive twenty
+minutes later.
+
+None of these are exotic bugs. They are the difference between software that
+demos and software that runs.
+
+---
+
+## Stack
+
+Next.js 15 (App Router) · React 19 · TypeScript · Supabase (Postgres, Auth,
+Storage) · Vercel
+
+Row-level security is enabled on every table with no public policies — all
+data access routes through server-side API routes using the service role, and
+judge/organizer authorization is checked per request.
+
+---
+
+## Known limitations
+
+Honest list, in the order I would fix them:
+
+1. **No auto-refresh for judges.** A "submissions changed, reload" banner, or
+   a Supabase realtime subscription, would have prevented the worst moment of
+   the event.
+2. **No edit-code recovery.** Teams should be able to recover access by email
+   instead of resubmitting under a new name.
+3. **No in-app judge account creation.** Accounts are provisioned directly in
+   the database.
+4. **No organizer edit for events or submissions.** Corrections require
+   database access.
+5. **4 MB upload cap**, imposed by routing uploads through a serverless
+   function. Uploading directly to Supabase Storage from the browser would
+   lift it.
+
+---
+
+## Local setup
 
 ```bash
 npm install
+cp .env.example .env.local   # fill in your own Supabase project
 npm run dev
 ```
 
-Visit `http://localhost:3000`. If Supabase is not configured, the landing page shows setup guidance. After setup, an organizer can create the first event at `/judges`.
+Apply [`supabase/schema.sql`](supabase/schema.sql) to a fresh Supabase project
+first. Required variables:
 
-## Upload limits and privacy
+| Variable | Purpose |
+| --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public anon key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server-side only. Bypasses RLS — never expose it to the browser |
 
-Uploads pass through the Vercel function to Supabase Storage, so the app limits a file to 4 MB to stay within Vercel's request-body limit. Files are stored in a private bucket and served to signed-in judges through short-lived download links. Team edit codes are generated randomly, stored only as SHA-256 hashes, and must be retained by the team. This starter app does not include account recovery for lost team codes or an organizer-facing score export.
+---
+
+## Credits
+
+Foundation by [Deepika Sethi](https://github.com/SethiDeepika). Results view,
+design system, content configuration and event operations by
+[Carlo Reyes](https://github.com/careyes05). Run by the Gabelli Product
+Management Club and the Fordham Artificial Intelligence Society,
+November 2026.
